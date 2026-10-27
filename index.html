@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rubik’s Race · Tablero aleatorio</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e7eaf0; --ink:#1a2030; --muted:#566077; --frame:#101216; --btn:#1a2030; --btnink:#ffffff;
+  --azul:#0051ba; --blanco:#f5f5ef; --verde:#009e60; --amarillo:#ffd500; --rojo:#c41e3a; --naranja:#ff5800;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#1b2030;--ink:#eef0f5;--muted:#9aa3b8;--btn:#eef0f5;--btnink:#1a2030;--frame:#07080a}
+}
+:root[data-theme="dark"]{--bg:#1b2030;--ink:#eef0f5;--muted:#9aa3b8;--btn:#eef0f5;--btnink:#1a2030;--frame:#07080a}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:20px;overflow-x:hidden}
+header{text-align:center}
+h1{margin:0;font-size:clamp(2rem,7vw,3rem);font-weight:800;letter-spacing:-.02em;line-height:1}
+header p{margin:10px 0 0;color:var(--muted);font-size:1.05rem}
+.stage{perspective:900px}
+.board{width:min(84vw,380px);aspect-ratio:1;padding:4.5%;gap:4.5%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+  background:var(--frame);border-radius:7%;box-shadow:0 18px 40px -18px rgba(0,0,0,.55)}
+.cell{border-radius:12%;display:grid;place-items:center;font-weight:800;font-size:clamp(.8rem,3.2vw,1.1rem);
+  color:transparent;background:var(--c);box-shadow:inset 0 -5px 0 rgba(0,0,0,.14), inset 0 3px 0 rgba(255,255,255,.22);user-select:none}
+.letters .cell{color:rgba(0,0,0,.62)}
+.letters .cell[data-c="azul"],.letters .cell[data-c="verde"],.letters .cell[data-c="rojo"]{color:rgba(255,255,255,.85)}
+.controls{display:flex;flex-direction:column;align-items:center;gap:14px}
+button{font:inherit;font-weight:800;font-size:1.15rem;padding:14px 38px;border:0;border-radius:999px;background:var(--btn);color:var(--btnink);cursor:pointer;
+  transition:transform .12s}
+button:active{transform:scale(.96)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--azul);outline-offset:3px}
+label{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.95rem;cursor:pointer}
+input{width:18px;height:18px;accent-color:var(--azul)}
+small{color:var(--muted)}
+.qr{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.qr p{margin:0;color:var(--muted);font-size:.95rem}
+#qrbox{background:#fff;padding:12px;border-radius:14px;line-height:0;box-shadow:0 10px 24px -14px rgba(0,0,0,.5)}
+#qrbox img,#qrbox canvas{width:168px;height:168px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Rubik’s Race</h1>
+  <p>Reproduce este patrón con tu cubo.</p>
+</header>
+
+<div class="stage">
+  <div class="board" id="board" role="img" aria-label="Patrón de colores 3 por 3"></div>
+</div>
+
+<div class="controls">
+  <button id="shuffle" type="button">Revolver</button>
+  <label><input type="checkbox" id="letters"> Mostrar letras en las casillas</label>
+  <small>También puedes usar la barra espaciadora.</small>
+</div>
+
+<div class="qr">
+  <div id="qrbox"></div>
+  <p>Escanea el código para abrir el juego en otro celular.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const COLORES = [
+  {id:"azul", L:"AZ"}, {id:"blanco", L:"BL"}, {id:"verde", L:"VE"},
+  {id:"amarillo", L:"AM"}, {id:"rojo", L:"RO"}, {id:"naranja", L:"NA"}
+];
+const board = document.getElementById("board");
+const cells = [];
+for (let i = 0; i < 9; i++) {
+  const d = document.createElement("div");
+  d.className = "cell";
+  board.appendChild(d);
+  cells.push(d);
+}
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function paint(el, c) {
+  el.dataset.c = c.id;
+  el.style.setProperty("--c", "var(--" + c.id + ")");
+  el.textContent = c.L;
+}
+function nuevoPatron() {
+  return cells.map(() => COLORES[Math.floor(Math.random() * COLORES.length)]);
+}
+function revolver(animar) {
+  const p = nuevoPatron();
+  cells.forEach((el, i) => {
+    if (!animar || reduce) { paint(el, p[i]); return; }
+    const delay = i * 45;
+    el.animate(
+      [{transform:"rotateY(0)"},{transform:"rotateY(90deg)",offset:.5},{transform:"rotateY(0)"}],
+      {duration:420, delay, easing:"ease-in-out"}
+    );
+    setTimeout(() => paint(el, p[i]), delay + 210);
+  });
+  board.setAttribute("aria-label", "Patrón: " + p.map(c => c.id).join(", "));
+}
+
+document.getElementById("shuffle").addEventListener("click", () => revolver(true));
+document.getElementById("letters").addEventListener("change", e => board.classList.toggle("letters", e.target.checked));
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" && !/^(BUTTON|INPUT)$/.test(e.target.tagName)) { e.preventDefault(); revolver(true); }
+});
+revolver(false);
+
+try {
+  if (!/^https?:$/.test(location.protocol)) throw new Error("sin URL pública");
+  new QRCode(document.getElementById("qrbox"), {
+    text: location.href.split("#")[0].split("?")[0],
+    width: 336, height: 336,
+    colorDark: "#000000", colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+  });
+} catch (e) {
+  document.querySelector(".qr").style.display = "none";
+}
+</script>
+</body>
+</html>
